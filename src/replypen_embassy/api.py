@@ -1,4 +1,4 @@
-"""Generic bearer-authenticated rootcause API caller."""
+"""Generic bearer-authenticated ReplyPen API caller."""
 
 from __future__ import annotations
 
@@ -138,7 +138,7 @@ class API:
             return APIResponse(error=type(error).__name__, retryable=True, err=error)
         target_path = urlsplit(target).path
         self._config.logger.info(
-            "rootcause api call",
+            "replypen api call",
             extra={"method": method, "path": target_path, "status": response.status},
         )
         parsed = _parse_body(response.body)

@@ -2,9 +2,9 @@ from __future__ import annotations
 
 import pytest
 
-from rootcause_embassy import Config, Embassy
-from rootcause_embassy.errors import Misconfigured
-from rootcause_embassy.http import HTTPRequest, HTTPResponse
+from replypen_embassy import Config, Embassy
+from replypen_embassy.errors import Misconfigured
+from replypen_embassy.http import HTTPRequest, HTTPResponse
 
 
 @pytest.mark.parametrize(

@@ -1,4 +1,4 @@
-from rootcause_embassy.result import decode_result
+from replypen_embassy.result import decode_result
 
 
 def test_present_empty_decline_is_still_a_decline() -> None:

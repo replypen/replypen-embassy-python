@@ -284,8 +284,8 @@ wheels = [
 ]
 
 [[package]]
-name = "rootcause-embassy"
-version = "0.5.0"
+name = "replypen-embassy"
+version = "0.6.0"
 source = { editable = "." }
 
 [package.dev-dependencies]

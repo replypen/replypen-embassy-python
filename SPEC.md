@@ -1,17 +1,17 @@
-# rootcause-embassy-python — build plan (WP4)
+# replypen-embassy-python — build plan (WP4)
 
-The Python **Embassy**: rootcause's trusted in-app presence inside a customer's Python service.
-Package `rootcause_embassy`, `uv` project, Python ≥ 3.13, **zero runtime dependencies** (stdlib
+The Python **Embassy**: ReplyPen's trusted in-app presence inside a customer's Python service.
+Package `replypen_embassy`, `uv` project, Python ≥ 3.13, **zero runtime dependencies** (stdlib
 only: `hmac`, `hashlib`, `json`, `urllib.request`, `threading`, `base64`, `html`, `urllib.parse`).
 
-**The contract lives in `~/code/rootcause-org/rootcause-embassy`** (`CONTRACT.md`, `planes/*.md`,
+**The contract lives in `github.com/replypen/replypen-embassy`** (`CONTRACT.md`, `planes/*.md`,
 `decisions.md`, `fixtures/`). Read all of it first. Vendor `fixtures/` from hub commit
 `b3a9dad1c1d36f160a554a9cb1b5719aaa3caf5c` into `tests/contract/testdata/` (wholesale copy, no
 trailing-newline edits) and write that SHA to `tests/contract/testdata/HUB_SHA`. Never fix a
 fixture here — an ambiguity goes back to the hub as a decision.
 
-Reference implementation to mirror (structure, tests, README tone): `~/code/rootcause-org/rootcause-embassy-go`
-(`contract_test.go` is the conformance suite to port 1:1). Ruby: `~/code/rootcause-org/rootcause-embassy-ruby`.
+Reference implementation to mirror (structure, tests, README tone): `github.com/replypen/replypen-embassy-go`
+(`contract_test.go` is the conformance suite to port 1:1). Ruby: `github.com/replypen/replypen-embassy-ruby`.
 
 First consumer: DentAI (Litestar, 3.13). It needs **chat embed JWT mint immediately**; actions +
 api planes next. Zero DentAI-specific code in this repo.
@@ -66,28 +66,28 @@ api planes next. Zero DentAI-specific code in this repo.
    no decline. `Config.result_handler: Callable[[Result], None]` — unset/unloadable = signed 500
    `handler_error`; an unexpected handler exception = signed 500 `internal_error` whose message is
    the exception class name only. A handler-raised contract `Refusal` propagates unchanged.
-10. **Chat** (`rootcause_embassy.chat`): `mint_embed_token(secret, Claims) -> str` with pinned claim
+10. **Chat** (`replypen_embassy.chat`): `mint_embed_token(secret, Claims) -> str` with pinned claim
     order `sub,aud,iss,jti,origin,iat,nbf,exp,principal{kind,external_id,asserted_by,assurance},
     tenant?,locale?,color_scheme?` (optionals omitted, never null), header exactly
     `{"alg":"HS256","typ":"JWT"}`, base64url unpadded. `canonical_origin()` per `planes/chat.md`
     (refuse path/query/fragment at mint). `widget_tag_html(Widget) -> str`, loader
     `/chat/widget/v1/loader.js?v=5`, attributes HTML-escaped, optional attrs only when set. Key =
     `chat_secret` (webhook_secret) and boot-time refusal when it equals `secret`.
-11. **API plane** (`rootcause_embassy.api`): `API.get/post/patch/put/delete(path, body=None,
+11. **API plane** (`replypen_embassy.api`): `API.get/post/patch/put/delete(path, body=None,
     params=None) -> APIResponse(ok, status, body, field_errors, error, retryable, err)`; `rcor_`
     refresh exchange at `{api_base_url}/oauth/token` (`client_id=rcocl_cli`), in-process cache per
     `(api_base_url, api_key)` behind a lock, refresh 60s early on `time.monotonic()`, one re-exchange
     on 401, `expires_in` default 3600; non-`rcor_` key used verbatim. Off-origin absolute URL /
     blank path / unset config → raise `Misconfigured`. Retryable: transport, auth, 5xx, 429, 408.
 12. **Config** (`dataclass`, validated fail-closed at construction), env fallbacks identical to Go:
-    `ROOTCAUSE_ACTION_SECRET`, `ROOTCAUSE_FETCH_URL`, `ROOTCAUSE_TRIGGER_URL`,
-    `ROOTCAUSE_SENT_MESSAGE_URL`, `ROOTCAUSE_API_BASE_URL`, `ROOTCAUSE_API_KEY`,
-    `ROOTCAUSE_CHAT_SECRET`, `ROOTCAUSE_CHAT_PROJECT`, `ROOTCAUSE_CHAT_BASE_URL`. Determinism seams:
+    `REPLYPEN_ACTION_SECRET`, `REPLYPEN_FETCH_URL`, `REPLYPEN_TRIGGER_URL`,
+    `REPLYPEN_SENT_MESSAGE_URL`, `REPLYPEN_API_BASE_URL`, `REPLYPEN_API_KEY`,
+    `REPLYPEN_CHAT_SECRET`, `REPLYPEN_CHAT_PROJECT`, `REPLYPEN_CHAT_BASE_URL`. Determinism seams:
     `now: Callable[[], float]` (unix seconds), `nonce: Callable[[], str]`,
     `transport: Callable[[HTTPRequest], HTTPResponse]` (default urllib, 20s timeout) — the
     conformance suite injects all three; no live server needed. `max_body_bytes` defaults to 8 MiB
     and both inbound routes check it before authentication/decoding.
-13. **Logging**: stdlib `logging` logger `rootcause_embassy`; identifiers, shapes, byte counts only.
+13. **Logging**: stdlib `logging` logger `replypen_embassy`; identifiers, shapes, byte counts only.
     `internal_error` message = exception class name only.
 14. **Taxonomy**: project / run / session / principal / tenant tuple / action / Embassy. No aliases.
 
@@ -99,7 +99,7 @@ mise.toml                 [tools] python = "3.13"
 Makefile                  check: lint test · lint: ruff check + ruff format --check + mypy · test: pytest · conformance: pytest tests/contract -s
 README.md                 install, configure, Litestar + FastAPI mount snippets, chat mint, runner example, step table
 AGENTS.md                 repo map + rules (mirror the Go one; contract lives in the hub)
-src/rootcause_embassy/
+src/replypen_embassy/
   __init__.py             Embassy, Config, Response, public re-exports, VERSION = "0.1.0", PROTOCOL = 1, RUNTIME = "python"
   config.py               Config + env fallbacks + fail-closed validation
   signature.py            sign / verify / HEADER
@@ -123,7 +123,7 @@ tests/
 
 Target ≈ 2k LOC source, tests lean — port the Go `contract_test.go` cases, don't invent more.
 
-## Conformance suite (must all pass; `make conformance` prints `SYNC: fixtures vendored from rootcause-embassy commit <sha>`)
+## Conformance suite (must all pass; `make conformance` prints `SYNC: fixtures vendored from replypen-embassy commit <sha>`)
 
 1. Every `signing_vectors.json.bodies` entry: file byte length, sha256, `sign()` match, own
    `verify()` accepts, mutated body rejected. Every `query_strings` entry: raw query signature match.

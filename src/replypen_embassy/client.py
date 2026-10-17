@@ -145,7 +145,7 @@ class AnalysisClient:
             status=_string(parsed.get("status")),
         )
         self._config.logger.info(
-            "rootcause analysis triggered",
+            "replypen analysis triggered",
             extra={
                 "analysis_id": analysis.analysis_id,
                 "metadata_keys": sorted(request.metadata),
@@ -193,7 +193,7 @@ class AnalysisClient:
             selected_project_id,
         )
         self._config.logger.info(
-            "rootcause sent-message captured",
+            "replypen sent-message captured",
             extra={
                 "session_id": request.session_id,
                 "sent_bytes": len(request.sent_body.encode()),

@@ -2,8 +2,8 @@ from __future__ import annotations
 
 import pytest
 
-from rootcause_embassy.chat import canonical_origin
-from rootcause_embassy.errors import Misconfigured
+from replypen_embassy.chat import canonical_origin
+from replypen_embassy.errors import Misconfigured
 
 
 @pytest.mark.parametrize(

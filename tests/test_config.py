@@ -2,27 +2,37 @@ from __future__ import annotations
 
 import pytest
 
-from rootcause_embassy import Config
-from rootcause_embassy.errors import Misconfigured
+from replypen_embassy import Config
+from replypen_embassy.errors import Misconfigured
 
 FETCH = "https://app.replypen.com/actions/script"
+ENV_SUFFIXES = (
+    "ACTION_SECRET",
+    "FETCH_URL",
+    "TRIGGER_URL",
+    "SENT_MESSAGE_URL",
+    "API_BASE_URL",
+    "API_KEY",
+    "CHAT_SECRET",
+    "CHAT_PROJECT",
+    "CHAT_BASE_URL",
+)
 
 
-def test_config_validation_fails_closed(monkeypatch: pytest.MonkeyPatch) -> None:
-    for key in (
-        "ROOTCAUSE_ACTION_SECRET",
-        "ROOTCAUSE_FETCH_URL",
-        "ROOTCAUSE_API_BASE_URL",
-        "ROOTCAUSE_API_KEY",
-        "ROOTCAUSE_CHAT_SECRET",
-        "ROOTCAUSE_CHAT_PROJECT",
-        "ROOTCAUSE_CHAT_BASE_URL",
-    ):
-        monkeypatch.delenv(key, raising=False)
-    with pytest.raises(Misconfigured, match="Secret is required"):
+@pytest.fixture(autouse=True)
+def _clean_env(monkeypatch: pytest.MonkeyPatch) -> None:
+    for suffix in ENV_SUFFIXES:
+        monkeypatch.delenv(f"REPLYPEN_{suffix}", raising=False)
+        monkeypatch.delenv(f"ROOTCAUSE_{suffix}", raising=False)
+
+
+def test_config_validation_fails_closed() -> None:
+    with pytest.raises(Misconfigured, match=r"Secret is required \(REPLYPEN_ACTION_SECRET\)"):
         Config(fetch_url=FETCH)
-    with pytest.raises(Misconfigured, match="placeholder"):
+    with pytest.raises(Misconfigured, match=r"placeholder.*REPLYPEN_FETCH_URL"):
         Config(secret="secret")
+    with pytest.raises(Misconfigured, match="placeholder"):
+        Config(secret="secret", fetch_url="https://rootcause.invalid/actions/script")
     with pytest.raises(Misconfigured, match="TotalDeadline"):
         Config(secret="secret", fetch_url=FETCH, timeout=23)
     with pytest.raises(Misconfigured, match="byte caps"):
@@ -48,6 +58,30 @@ def test_config_env_fallback_and_explicit_precedence(monkeypatch: pytest.MonkeyP
     assert config.secret == "from-env"
     assert config.trigger_url.endswith("/analyses/demo")
     assert Config(secret="explicit").secret == "explicit"
+
+
+@pytest.mark.parametrize("suffix", ENV_SUFFIXES)
+def test_replypen_env_wins_over_legacy_rootcause_env(
+    monkeypatch: pytest.MonkeyPatch, suffix: str
+) -> None:
+    def value(kind: str) -> str:
+        return f"https://{kind}.example/x" if suffix.endswith("URL") else f"{kind}-{suffix}"
+
+    for base, val in (
+        ("ACTION_SECRET", "action-secret"),
+        ("FETCH_URL", FETCH),
+        ("API_BASE_URL", "https://app.replypen.com"),
+        ("API_KEY", "key"),
+        ("CHAT_SECRET", "chat-secret"),
+        ("CHAT_PROJECT", "demo"),
+    ):
+        monkeypatch.setenv(f"REPLYPEN_{base}", val)
+    field = suffix.lower().removeprefix("action_")
+    monkeypatch.setenv(f"REPLYPEN_{suffix}", value("new"))
+    monkeypatch.setenv(f"ROOTCAUSE_{suffix}", value("legacy"))
+    assert getattr(Config(), field) == value("new")
+    monkeypatch.setenv(f"REPLYPEN_{suffix}", "")
+    assert getattr(Config(), field) == value("legacy")
 
 
 def test_reverse_secret_map_is_exclusive_and_validated() -> None:

@@ -1,26 +1,29 @@
-# rootcause-embassy-python
+# replypen-embassy-python
 
-The Python **Embassy**: rootcause's trusted in-app presence inside your Python service.
+The Python **Embassy**: ReplyPen's trusted in-app presence inside your Python service.
 
 It does four things, all on your side of the wire:
 
 1. **Actions** — verify a signed, digest-pinned invocation, resolve its approved Python body, and
    execute it through the runner your application explicitly registered.
-2. **Analysis** — ask rootcause to analyze something and receive the drafted answer later on a route
+2. **Analysis** — ask ReplyPen to analyze something and receive the drafted answer later on a route
    you mount. No polling or custom callback protocol.
-3. **Chat** — mint the short-lived token that lets a logged-in user chat with rootcause in your UI.
-4. **API** — call any rootcause API endpoint, with bearer exchange and caching handled for you.
+3. **Chat** — mint the short-lived token that lets a logged-in user chat with ReplyPen in your UI.
+4. **API** — call any ReplyPen API endpoint, with bearer exchange and caching handled for you.
 
 Python 3.13+. Zero runtime dependencies: the package uses only the standard library. The wire
 contract lives in the
-[`rootcause-embassy`](https://github.com/rootcause-org/rootcause-embassy) hub; this package vendors
+[`replypen-embassy`](https://github.com/replypen/replypen-embassy) hub; this package vendors
 and replays that hub's byte-exact fixtures.
 
 ## Install
 
 ```sh
-uv add rootcause-embassy
+uv add "replypen-embassy @ git+https://github.com/replypen/replypen-embassy-python"
 ```
+
+`import replypen_embassy`. The legacy `import rootcause_embassy` (and every
+`rootcause_embassy.<module>`) still works: it is the very same module, shipped in this dist.
 
 ## Configure
 
@@ -35,20 +38,21 @@ only to choose the key. Unknown, missing, or malformed selectors get an opaque u
 cannot reach replay, resolution, dispatch, or execution.
 
 ```python
-from rootcause_embassy import Config, Embassy
+from replypen_embassy import Config, Embassy
 
 embassy = Embassy(
     Config(
-        # Every string falls back to its ROOTCAUSE_* environment variable:
-        # secret            ROOTCAUSE_ACTION_SECRET
-        # fetch_url         ROOTCAUSE_FETCH_URL
-        # trigger_url       ROOTCAUSE_TRIGGER_URL
-        # sent_message_url  ROOTCAUSE_SENT_MESSAGE_URL
-        # api_base_url      ROOTCAUSE_API_BASE_URL
-        # api_key           ROOTCAUSE_API_KEY
-        # chat_secret       ROOTCAUSE_CHAT_SECRET  (webhook_secret, never secret)
-        # chat_project      ROOTCAUSE_CHAT_PROJECT
-        # chat_base_url     ROOTCAUSE_CHAT_BASE_URL
+        # Every string falls back to its REPLYPEN_* environment variable,
+        # then to the legacy ROOTCAUSE_* name (e.g. ROOTCAUSE_ACTION_SECRET):
+        # secret            REPLYPEN_ACTION_SECRET
+        # fetch_url         REPLYPEN_FETCH_URL
+        # trigger_url       REPLYPEN_TRIGGER_URL
+        # sent_message_url  REPLYPEN_SENT_MESSAGE_URL
+        # api_base_url      REPLYPEN_API_BASE_URL
+        # api_key           REPLYPEN_API_KEY
+        # chat_secret       REPLYPEN_CHAT_SECRET  (webhook_secret, never secret)
+        # chat_project      REPLYPEN_CHAT_PROJECT
+        # chat_base_url     REPLYPEN_CHAT_BASE_URL
         runner=run_action,
         result_handler=handle_analysis_result,
     )
@@ -79,19 +83,19 @@ def embassy_response(result: tuple[int, dict[str, str], bytes]) -> Response[byte
 
 
 @post("/rootcause/action", sync_to_thread=True)
-def rootcause_action_post(request: Request, data: bytes) -> Response[bytes]:
+def replypen_action_post(request: Request, data: bytes) -> Response[bytes]:
     return embassy_response(
         embassy.handle_action("POST", "", request.headers.get("X-Webhook-Signature"), data)
     )
 
 
 @route("/rootcause/action", http_method=NON_POST_METHODS, sync_to_thread=True)
-def rootcause_action_probe(request: Request) -> Response[bytes]:
+def replypen_action_probe(request: Request) -> Response[bytes]:
     return embassy_response(embassy.handle_action(request.method, "", None, b""))
 
 
 @get("/rootcause/action/health", sync_to_thread=True)
-def rootcause_action_health(request: Request) -> Response[bytes]:
+def replypen_action_health(request: Request) -> Response[bytes]:
     raw_query = str(request.url.query).encode()
     return embassy_response(
         embassy.handle_action(
@@ -104,14 +108,14 @@ def rootcause_action_health(request: Request) -> Response[bytes]:
 
 
 @post("/rootcause/result", sync_to_thread=True)
-def rootcause_result_post(request: Request, data: bytes) -> Response[bytes]:
+def replypen_result_post(request: Request, data: bytes) -> Response[bytes]:
     return embassy_response(
         embassy.handle_result("POST", request.headers.get("X-Webhook-Signature"), data)
     )
 
 
 @route("/rootcause/result", http_method=NON_POST_METHODS, sync_to_thread=True)
-def rootcause_result_probe(request: Request) -> Response[bytes]:
+def replypen_result_probe(request: Request) -> Response[bytes]:
     return embassy_response(embassy.handle_result(request.method, None, b""))
 ```
 
@@ -146,19 +150,19 @@ def embassy_response(result: tuple[int, dict[str, str], bytes]) -> Response:
 
 
 @app.post("/rootcause/action")
-def rootcause_action_post(request: Request, data: Annotated[bytes, Depends(raw_body)]) -> Response:
+def replypen_action_post(request: Request, data: Annotated[bytes, Depends(raw_body)]) -> Response:
     return embassy_response(
         embassy.handle_action("POST", "", request.headers.get("X-Webhook-Signature"), data)
     )
 
 
 @app.api_route("/rootcause/action", methods=NON_POST_METHODS)
-def rootcause_action_probe(request: Request) -> Response:
+def replypen_action_probe(request: Request) -> Response:
     return embassy_response(embassy.handle_action(request.method, "", None, b""))
 
 
 @app.get("/rootcause/action/health")
-def rootcause_action_health(request: Request) -> Response:
+def replypen_action_health(request: Request) -> Response:
     return embassy_response(
         embassy.handle_action(
             "GET",
@@ -170,14 +174,14 @@ def rootcause_action_health(request: Request) -> Response:
 
 
 @app.post("/rootcause/result")
-def rootcause_result_post(request: Request, data: Annotated[bytes, Depends(raw_body)]) -> Response:
+def replypen_result_post(request: Request, data: Annotated[bytes, Depends(raw_body)]) -> Response:
     return embassy_response(
         embassy.handle_result("POST", request.headers.get("X-Webhook-Signature"), data)
     )
 
 
 @app.api_route("/rootcause/result", methods=NON_POST_METHODS)
-def rootcause_result_probe(request: Request) -> Response:
+def replypen_result_probe(request: Request) -> Response:
     return embassy_response(embassy.handle_result(request.method, None, b""))
 ```
 
@@ -195,7 +199,7 @@ import time
 from types import MappingProxyType
 from typing import Any
 
-from rootcause_embassy import ActionContext
+from replypen_embassy import ActionContext
 
 
 def run_action(ctx: ActionContext, params: dict[str, Any]) -> Any:
@@ -210,7 +214,7 @@ def run_action(ctx: ActionContext, params: dict[str, Any]) -> Any:
         "action_run_id": ctx.action_run_id,  # host ledger id; None on dry run/older hosts
         "out": ctx.out,  # captured stdout, capped at 64 KiB
     }
-    exec(compile(ctx.script, f"<rootcause:{ctx.digest}>", "exec"), scope)
+    exec(compile(ctx.script, f"<replypen:{ctx.digest}>", "exec"), scope)
     return scope["result"]
 ```
 
@@ -250,7 +254,7 @@ normal behavior. Health does not advertise `attachments_inline`. The inbound bod
 ## Async analysis
 
 ```python
-from rootcause_embassy import AnalysisRequest, Principal
+from replypen_embassy import AnalysisRequest, Principal
 
 analysis = embassy.start_analysis(
     AnalysisRequest(
@@ -258,7 +262,7 @@ analysis = embassy.start_analysis(
         body=ticket.body,
         project_id=ticket.project_id,  # required when using reverse-secret map mode
         metadata={"resource_type": "SupportTicket", "resource_id": str(ticket.id)},
-        session_id=ticket.rootcause_session_id,  # omit on turn one
+        session_id=ticket.replypen_session_id,  # omit on turn one
         principal=Principal(
             kind="acme_admin",
             external_id=str(current_user.id),  # from your authenticated session
@@ -275,18 +279,18 @@ A ticket created by a chat escalation action can hand that chat to its analysis:
 the host authorizes, and the action's approved manifest must opt in.
 
 Your `result_handler(result)` must be idempotent: upsert by `result.analysis_id` or metadata. A
-handler failure is not acknowledged, the nonce is released, and rootcause redelivers. Render
+handler failure is not acknowledged, the nonce is released, and ReplyPen redelivers. Render
 `result.actions` as human-confirmed proposals; never execute them automatically.
 `result.executed_actions` already ran host-side and must be rendered as outcomes.
 
 After a human sends a reply or answers a question:
 
 ```python
-from rootcause_embassy import Answer, SentMessageMetadata, SentMessageRequest
+from replypen_embassy import Answer, SentMessageMetadata, SentMessageRequest
 
 embassy.capture_sent_message(
     SentMessageRequest(
-        session_id=ticket.rootcause_session_id,
+        session_id=ticket.replypen_session_id,
         project_id=ticket.project_id,  # required when using reverse-secret map mode
         sent_body=reply.body,
         proposed_body=ticket.draft,
@@ -303,7 +307,7 @@ Attachments are strict base64 and capped before transport at 256 KiB each and 6 
 ## Embedded chat
 
 ```python
-from rootcause_embassy import Claims, Widget, mint_embed_token, widget_tag_html
+from replypen_embassy import Claims, Widget, mint_embed_token, widget_tag_html
 
 claims = Claims(
     project="acme",
@@ -320,13 +324,14 @@ tag = widget_tag_html(
 )
 ```
 
-Mint a fresh token per render: the host burns its `jti` when a session opens. Chat uses the project's
+Mint a fresh token per render: the host burns its `jti` when a session opens. The token's `aud` is
+`replypen:chat:<project>`. Chat uses the project's
 `webhook_secret`, never the action secret.
 
 The tag uses loader revision `?v=5`. Register `getPageContext` with `RootCause('boot',
 {getPageContext: () => "# Current selection\nResource: people"})` before loading it to provide
 per-message Markdown. The hosted loader captures URL/context at submission and preserves queued
-snapshots; these hints never authorize access. See the [hub chat contract](https://github.com/rootcause-org/rootcause-embassy/blob/main/planes/chat.md#page-context-page_url-page_context).
+snapshots; these hints never authorize access. See the [hub chat contract](https://github.com/replypen/replypen-embassy/blob/main/planes/chat.md#page-context-page_url-page_context).
 
 ## Generic API plane
 

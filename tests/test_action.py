@@ -1,4 +1,4 @@
-from rootcause_embassy.action import _CappedStringIO
+from replypen_embassy.action import _CappedStringIO
 
 
 def test_stdout_cap_counts_utf8_bytes_without_splitting_characters() -> None:

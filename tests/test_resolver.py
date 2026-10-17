@@ -6,11 +6,11 @@ from urllib.parse import parse_qs, urlsplit
 
 import pytest
 
-from rootcause_embassy import Config
-from rootcause_embassy.errors import Refusal
-from rootcause_embassy.http import HTTPRequest, HTTPResponse
-from rootcause_embassy.resolver import Resolver
-from rootcause_embassy.signature import HEADER, sign
+from replypen_embassy import Config
+from replypen_embassy.errors import Refusal
+from replypen_embassy.http import HTTPRequest, HTTPResponse
+from replypen_embassy.resolver import Resolver
+from replypen_embassy.signature import HEADER, sign
 
 PROJECT_A = "11111111-1111-1111-1111-111111111111"
 PROJECT_B = "22222222-2222-2222-2222-222222222222"

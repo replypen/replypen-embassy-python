@@ -8,7 +8,7 @@ from urllib.parse import parse_qs, urlsplit
 
 import pytest
 
-from rootcause_embassy import (
+from replypen_embassy import (
     HEADER,
     ActionContext,
     AnalysisRequest,
@@ -28,8 +28,9 @@ from rootcause_embassy import (
     verify,
     widget_tag_html,
 )
-from rootcause_embassy.errors import Misconfigured, Refusal
-from rootcause_embassy.http import HTTPRequest, HTTPResponse
+from replypen_embassy.chat import _sign_hs256
+from replypen_embassy.errors import Misconfigured, Refusal
+from replypen_embassy.http import HTTPRequest, HTTPResponse
 
 DATA = Path(__file__).parent / "testdata"
 REVERSE_SECRET = "contract-reverse-secret"
@@ -854,9 +855,8 @@ def assert_outbound(host: FakeHost, golden: str) -> None:
     assert host.last_request.headers[HEADER] == sign(host.last_request.body, REVERSE_SECRET)
 
 
-def test_chat_jwt_and_widget_vectors() -> None:
-    vector = json_fixture("chat/jwt_vector.json")
-    claims = Claims(
+def _vector_claims(vector: dict[str, Any]) -> Claims:
+    return Claims(
         project="acme",
         external_id="user-8f3",
         kind="acme_user",
@@ -868,11 +868,37 @@ def test_chat_jwt_and_widget_vectors() -> None:
         ttl=vector["ttl_seconds"],
         issued_at=vector["now_unix"],
     )
+
+
+def test_chat_mint_replays_replypen_vector() -> None:
+    vector = json_fixture("chat/jwt_vector_replypen.json")
+    claims = _vector_claims(vector)
     token = mint_embed_token(vector["secret"], claims)
     assert token == vector["token"]
     assert token.startswith(vector["signing_input"] + ".")
     header = json.loads(_b64decode(token.split(".")[0]))
     assert header == {"alg": "HS256", "typ": "JWT"}
+    assert json.loads(_b64decode(token.split(".")[1]))["aud"] == "replypen:chat:acme"
+    with pytest.raises(Misconfigured):
+        mint_embed_token("", claims)
+
+
+@pytest.mark.parametrize(
+    "name",
+    [
+        "jwt_vector.json",
+        "jwt_vector_credentials.json",
+        "jwt_vector_replypen.json",
+        "jwt_vector_credentials_replypen.json",
+    ],
+)
+def test_chat_hs256_replays_every_vector(name: str) -> None:
+    vector = json_fixture(f"chat/{name}")
+    assert _sign_hs256(vector["secret"], vector["signing_input"]) == vector["token"]
+
+
+def test_chat_widget_tag_vector() -> None:
+    token = json_fixture("chat/jwt_vector.json")["token"]
     tag = widget_tag_html(
         Widget(
             base_url="https://app.replypen.com",
@@ -885,8 +911,6 @@ def test_chat_jwt_and_widget_vectors() -> None:
         )
     )
     assert tag == fixture("chat/widget_tag.html").decode().rstrip("\n")
-    with pytest.raises(Misconfigured):
-        mint_embed_token("", claims)
 
 
 def test_api_exchange_cache_401_static_retryable_and_origin_floor() -> None:

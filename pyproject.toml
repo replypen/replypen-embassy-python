@@ -3,9 +3,9 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "rootcause-embassy"
-version = "0.5.0"
-description = "rootcause's trusted in-app presence for Python services"
+name = "replypen-embassy"
+version = "0.6.0"
+description = "ReplyPen's trusted in-app presence for Python services"
 readme = "README.md"
 requires-python = ">=3.13"
 dependencies = []
@@ -18,7 +18,7 @@ dev = [
 ]
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/rootcause_embassy"]
+packages = ["src/replypen_embassy", "src/rootcause_embassy"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
@@ -33,4 +33,4 @@ select = ["E", "F", "I", "UP", "B", "SIM", "RUF"]
 [tool.mypy]
 python_version = "3.13"
 strict = true
-packages = ["rootcause_embassy"]
+packages = ["replypen_embassy", "rootcause_embassy"]

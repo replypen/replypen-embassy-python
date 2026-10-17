@@ -19,6 +19,8 @@ DEFAULT_ASSURANCE = "customer_backend_jwt"
 _HEADER = b'{"alg":"HS256","typ":"JWT"}'
 # Loader contract revision (hub decisions.md #25).
 LOADER_PATH = "/chat/widget/v1/loader.js?v=5"
+# The host also accepts the legacy "rootcause:chat:" audience; we only mint the canonical one.
+AUDIENCE_PREFIX = "replypen:chat:"
 
 
 @dataclass(frozen=True, slots=True)
@@ -67,7 +69,7 @@ def mint_embed_token(secret: str, claims: Claims) -> str:
 
     payload: dict[str, object] = {
         "sub": claims.external_id,
-        "aud": f"rootcause:chat:{claims.project}",
+        "aud": f"{AUDIENCE_PREFIX}{claims.project}",
         "iss": claims.project,
         "jti": jti,
         "origin": origin,
@@ -90,7 +92,10 @@ def mint_embed_token(secret: str, claims: Claims) -> str:
     claims_bytes = json.dumps(
         payload, separators=(",", ":"), ensure_ascii=False, allow_nan=False
     ).encode()
-    signing_input = f"{_b64(_HEADER)}.{_b64(claims_bytes)}"
+    return _sign_hs256(secret, f"{_b64(_HEADER)}.{_b64(claims_bytes)}")
+
+
+def _sign_hs256(secret: str, signing_input: str) -> str:
     signature = hmac.new(secret.encode(), signing_input.encode(), hashlib.sha256).digest()
     return f"{signing_input}.{_b64(signature)}"
 

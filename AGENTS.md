@@ -1,11 +1,11 @@
-# rootcause-embassy-python — agent map
+# replypen-embassy-python — agent map
 
 The Python Embassy. Customer-facing usage is in [README.md](README.md); this file maps ownership and
 the rules for changing the implementation.
 
 ## Contract authority
 
-The wire contract lives in `~/code/rootcause-org/rootcause-embassy`: `CONTRACT.md`,
+The wire contract lives in the hub `github.com/replypen/replypen-embassy`: `CONTRACT.md`,
 `planes/{actions,analysis,chat,api}.md`, `decisions.md`, and `fixtures/`.
 
 - Start every wire/behavior change in the hub. Never resolve an ambiguity only here.
@@ -18,7 +18,7 @@ The wire contract lives in `~/code/rootcause-org/rootcause-embassy`: `CONTRACT.m
 
 | Path | Owns |
 |---|---|
-| `src/rootcause_embassy/config.py` | env fallbacks, seams, fail-closed boot validation |
+| `src/replypen_embassy/config.py` | env fallbacks (`REPLYPEN_*`, then `ROOTCAUSE_*`), seams, fail-closed boot validation |
 | `signature.py` / `replay.py` | exact-byte HMAC and nonce/freshness protection |
 | `tenant.py` / `schema.py` | trusted tenant tuple and param re-validation |
 | `resolver.py` | memory/disk/signed-fetch resolution, digest verification |
@@ -28,6 +28,7 @@ The wire contract lives in `~/code/rootcause-org/rootcause-embassy`: `CONTRACT.m
 | `chat.py` | HS256 embed token and widget tag; separate chat key |
 | `api.py` | generic API caller and `rcor_` token exchange/cache |
 | `http.py` | injected transport types and urllib default |
+| `src/rootcause_embassy/` | legacy import alias: same module objects via `sys.modules` |
 | `tests/contract/` | byte-exact hub conformance suite |
 
 ## Rules
@@ -45,3 +46,12 @@ The wire contract lives in `~/code/rootcause-org/rootcause-embassy`: `CONTRACT.m
 
 Python cannot kill a running thread. Execution timeouts remain boundary checks plus
 `ActionContext.deadline`; document this honestly rather than implying cancellation.
+
+## Legacy names kept
+
+- Package `rootcause_embassy` (alias shim in the same dist): installed customer code imports it.
+- `ROOTCAUSE_*` env fallback: deployed customer env still sets those names.
+- Mount paths `/rootcause/action`, `/rootcause/result` in examples: wire, host calls them.
+- `data-rc-*` attributes, `rcor_`/`rcoa_` token ids, `RC_*` runtime env: wire.
+- `RootCause(...)` page global in docs: owned by the hosted loader, not this package.
+- Legacy chat vectors (`aud` `rootcause:chat:`) replayed: the host still accepts that audience.

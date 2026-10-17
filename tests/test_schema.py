@@ -2,8 +2,8 @@ from __future__ import annotations
 
 import pytest
 
-from rootcause_embassy.errors import Refusal
-from rootcause_embassy.schema import validate_params
+from replypen_embassy.errors import Refusal
+from replypen_embassy.schema import validate_params
 
 
 def test_schema_types_and_required_default() -> None:

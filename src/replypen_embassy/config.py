@@ -23,7 +23,7 @@ if TYPE_CHECKING:
     from .result import Result
 
 
-PLACEHOLDER_FETCH_URL = "https://rootcause.invalid/actions/script"
+PLACEHOLDER_FETCH_URL = "https://replypen.invalid/actions/script"
 Runner = Callable[["ActionContext", dict[str, Any]], Any]
 ResultHandler = Callable[["Result"], None]
 Transport = Callable[[HTTPRequest], HTTPResponse]
@@ -69,21 +69,21 @@ class Config:
     max_stdout_bytes: int = 64 * 1024
     max_attachment_bytes: int = 256 * 1024
     nonce_store: NonceStore = field(default_factory=MemoryNonceStore)
-    logger: logging.Logger = field(default_factory=lambda: logging.getLogger("rootcause_embassy"))
+    logger: logging.Logger = field(default_factory=lambda: logging.getLogger("replypen_embassy"))
     now: Callable[[], float] = time.time
     nonce: Callable[[], str] = _new_nonce
     transport: Transport = urllib_transport
 
     def __post_init__(self) -> None:
-        self.secret = self.secret or os.getenv("ROOTCAUSE_ACTION_SECRET", "")
-        self.fetch_url = self.fetch_url or os.getenv("ROOTCAUSE_FETCH_URL", "")
-        self.trigger_url = self.trigger_url or os.getenv("ROOTCAUSE_TRIGGER_URL", "")
-        self.sent_message_url = self.sent_message_url or os.getenv("ROOTCAUSE_SENT_MESSAGE_URL", "")
-        self.api_base_url = self.api_base_url or os.getenv("ROOTCAUSE_API_BASE_URL", "")
-        self.api_key = self.api_key or os.getenv("ROOTCAUSE_API_KEY", "")
-        self.chat_secret = self.chat_secret or os.getenv("ROOTCAUSE_CHAT_SECRET", "")
-        self.chat_project = self.chat_project or os.getenv("ROOTCAUSE_CHAT_PROJECT", "")
-        self.chat_base_url = self.chat_base_url or os.getenv("ROOTCAUSE_CHAT_BASE_URL", "")
+        self.secret = self.secret or _env("ACTION_SECRET")
+        self.fetch_url = self.fetch_url or _env("FETCH_URL")
+        self.trigger_url = self.trigger_url or _env("TRIGGER_URL")
+        self.sent_message_url = self.sent_message_url or _env("SENT_MESSAGE_URL")
+        self.api_base_url = self.api_base_url or _env("API_BASE_URL")
+        self.api_key = self.api_key or _env("API_KEY")
+        self.chat_secret = self.chat_secret or _env("CHAT_SECRET")
+        self.chat_project = self.chat_project or _env("CHAT_PROJECT")
+        self.chat_base_url = self.chat_base_url or _env("CHAT_BASE_URL")
         if not self.fetch_url:
             self.fetch_url = PLACEHOLDER_FETCH_URL
         if self.secrets is not None:
@@ -97,7 +97,7 @@ class Config:
             raise Misconfigured("Configure exactly one of Secret or Secrets")
         if not has_secret and (self.secrets is None or not self.secrets):
             raise Misconfigured(
-                "Secret is required (ROOTCAUSE_ACTION_SECRET) or Secrets must be non-empty; "
+                "Secret is required (REPLYPEN_ACTION_SECRET) or Secrets must be non-empty; "
                 "a blank HMAC key is forgeable"
             )
         if self.secrets is not None:
@@ -115,7 +115,7 @@ class Config:
             self.secrets = normalized
         if _placeholder_url(self.fetch_url):
             raise Misconfigured(
-                f"FetchURL is the placeholder ({self.fetch_url}); set ROOTCAUSE_FETCH_URL"
+                f"FetchURL is the placeholder ({self.fetch_url}); set REPLYPEN_FETCH_URL"
             )
         if self.timeout <= 0:
             raise Misconfigured("Timeout must be positive")
@@ -199,6 +199,11 @@ def _placeholder_url(raw: str) -> bool:
         or not _absolute_http_url(raw)
         or hostname.casefold().endswith(".invalid")
     )
+
+
+def _env(suffix: str) -> str:
+    """``REPLYPEN_<suffix>``, else legacy ``ROOTCAUSE_<suffix>``; empty counts as unset."""
+    return os.getenv(f"REPLYPEN_{suffix}", "") or os.getenv(f"ROOTCAUSE_{suffix}", "")
 
 
 def _nonblank(value: Any) -> bool:

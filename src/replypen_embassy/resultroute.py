@@ -76,7 +76,7 @@ class ResultRoute:
             nonce = _string(payload["nonce"])
             if record_nonce(nonce, self._config.nonce_store, self._config.clock_skew):
                 self._config.logger.info(
-                    "rootcause result redelivery acked",
+                    "replypen result redelivery acked",
                     extra={"analysis_id": _string(payload["analysis_id"])},
                 )
                 return self._signed(200, {"ok": True}, secret)
@@ -90,7 +90,7 @@ class ResultRoute:
             except BaseException as error:
                 error_type = type(error).__name__
                 self._config.logger.error(
-                    "rootcause result handler failed",
+                    "replypen result handler failed",
                     extra={
                         "analysis_id": _string(payload["analysis_id"]),
                         "error_type": error_type,
@@ -102,7 +102,7 @@ class ResultRoute:
                 sorted(str(key) for key in metadata) if isinstance(metadata, dict) else []
             )
             self._config.logger.info(
-                "rootcause result dispatched",
+                "replypen result dispatched",
                 extra={
                     "analysis_id": _string(payload["analysis_id"]),
                     "metadata_keys": metadata_keys,

@@ -128,7 +128,7 @@ class ActionPlane:
             script = self._resolver.resolve(action_id, digest, project_id, deadline)
             if invocation.get("dry_run") is True:
                 self._config.logger.info(
-                    "rootcause action dry-run validated",
+                    "replypen action dry-run validated",
                     extra={
                         "action_id": action_id,
                         "digest": digest,
@@ -162,7 +162,7 @@ class ActionPlane:
             )
         except Refusal as refusal:
             self._config.logger.warning(
-                "rootcause invocation refused",
+                "replypen invocation refused",
                 extra={"error_class": refusal.error_class, "status": refusal.status},
             )
             return self._signed(
@@ -178,7 +178,7 @@ class ActionPlane:
             )
         except Exception as error:
             self._config.logger.error(
-                "rootcause invocation failed",
+                "replypen invocation failed",
                 extra={"error_type": type(error).__name__},
             )
             return self._signed(
@@ -235,7 +235,7 @@ class ActionPlane:
             json.dumps(return_value, ensure_ascii=False, allow_nan=False)
         except BaseException as error:
             self._config.logger.info(
-                "rootcause action execution failed",
+                "replypen action execution failed",
                 extra={
                     "action_id": action_id,
                     "digest": digest,
@@ -245,7 +245,7 @@ class ActionPlane:
             )
             return self._execution_failure(started, output, error, traceback.format_exc(), secret)
         self._config.logger.info(
-            "rootcause action executed",
+            "replypen action executed",
             extra={
                 "action_id": action_id,
                 "digest": digest,
