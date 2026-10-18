@@ -51,7 +51,7 @@ Python cannot kill a running thread. Execution timeouts remain boundary checks p
 
 - Package `rootcause_embassy` (alias shim in the same dist): installed customer code imports it.
 - `ROOTCAUSE_*` env fallback: deployed customer env still sets those names.
-- Mount paths `/rootcause/action`, `/rootcause/result` in examples: wire, host calls them.
+- `/rootcause/action`, `/rootcause/result`: still valid mounts on deployed apps (host stores full URLs); examples show `/replypen/action|result` (hub decision 28).
 - `data-rc-*` attributes, `rcor_`/`rcoa_` token ids, `RC_*` runtime env: wire.
-- `RootCause(...)` page global in docs: owned by the hosted loader, not this package.
+- `window.RootCause`: the hosted loader's permanent alias of `window.ReplyPen`; docs show `ReplyPen(...)`.
 - Legacy chat vectors (`aud` `rootcause:chat:`) replayed: the host still accepts that audience.

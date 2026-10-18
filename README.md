@@ -65,6 +65,11 @@ embassy = Embassy(
 # )
 ```
 
+ReplyPen stores the mounts as full URLs, so an app already serving the pre-rename `/rootcause/action`,
+`/rootcause/action/health` and `/rootcause/result` keeps working. To move, add the new routes beside
+the old ones on the same `Embassy` (one nonce store), deploy, have the operator repoint
+`action_runner_url` / `action_result_url`, and keep the old routes.
+
 ### Litestar mount
 
 The package is framework-agnostic: adapters only translate request bytes and the returned
@@ -82,19 +87,19 @@ def embassy_response(result: tuple[int, dict[str, str], bytes]) -> Response[byte
     return Response(body, status_code=status, headers=headers, media_type=None)
 
 
-@post("/rootcause/action", sync_to_thread=True)
+@post("/replypen/action", sync_to_thread=True)
 def replypen_action_post(request: Request, data: bytes) -> Response[bytes]:
     return embassy_response(
         embassy.handle_action("POST", "", request.headers.get("X-Webhook-Signature"), data)
     )
 
 
-@route("/rootcause/action", http_method=NON_POST_METHODS, sync_to_thread=True)
+@route("/replypen/action", http_method=NON_POST_METHODS, sync_to_thread=True)
 def replypen_action_probe(request: Request) -> Response[bytes]:
     return embassy_response(embassy.handle_action(request.method, "", None, b""))
 
 
-@get("/rootcause/action/health", sync_to_thread=True)
+@get("/replypen/action/health", sync_to_thread=True)
 def replypen_action_health(request: Request) -> Response[bytes]:
     raw_query = str(request.url.query).encode()
     return embassy_response(
@@ -107,14 +112,14 @@ def replypen_action_health(request: Request) -> Response[bytes]:
     )
 
 
-@post("/rootcause/result", sync_to_thread=True)
+@post("/replypen/result", sync_to_thread=True)
 def replypen_result_post(request: Request, data: bytes) -> Response[bytes]:
     return embassy_response(
         embassy.handle_result("POST", request.headers.get("X-Webhook-Signature"), data)
     )
 
 
-@route("/rootcause/result", http_method=NON_POST_METHODS, sync_to_thread=True)
+@route("/replypen/result", http_method=NON_POST_METHODS, sync_to_thread=True)
 def replypen_result_probe(request: Request) -> Response[bytes]:
     return embassy_response(embassy.handle_result(request.method, None, b""))
 ```
@@ -149,19 +154,19 @@ def embassy_response(result: tuple[int, dict[str, str], bytes]) -> Response:
     return Response(body, status_code=status, headers=headers, media_type=None)
 
 
-@app.post("/rootcause/action")
+@app.post("/replypen/action")
 def replypen_action_post(request: Request, data: Annotated[bytes, Depends(raw_body)]) -> Response:
     return embassy_response(
         embassy.handle_action("POST", "", request.headers.get("X-Webhook-Signature"), data)
     )
 
 
-@app.api_route("/rootcause/action", methods=NON_POST_METHODS)
+@app.api_route("/replypen/action", methods=NON_POST_METHODS)
 def replypen_action_probe(request: Request) -> Response:
     return embassy_response(embassy.handle_action(request.method, "", None, b""))
 
 
-@app.get("/rootcause/action/health")
+@app.get("/replypen/action/health")
 def replypen_action_health(request: Request) -> Response:
     return embassy_response(
         embassy.handle_action(
@@ -173,14 +178,14 @@ def replypen_action_health(request: Request) -> Response:
     )
 
 
-@app.post("/rootcause/result")
+@app.post("/replypen/result")
 def replypen_result_post(request: Request, data: Annotated[bytes, Depends(raw_body)]) -> Response:
     return embassy_response(
         embassy.handle_result("POST", request.headers.get("X-Webhook-Signature"), data)
     )
 
 
-@app.api_route("/rootcause/result", methods=NON_POST_METHODS)
+@app.api_route("/replypen/result", methods=NON_POST_METHODS)
 def replypen_result_probe(request: Request) -> Response:
     return embassy_response(embassy.handle_result(request.method, None, b""))
 ```
@@ -328,7 +333,7 @@ Mint a fresh token per render: the host burns its `jti` when a session opens. Th
 `replypen:chat:<project>`. Chat uses the project's
 `webhook_secret`, never the action secret.
 
-The tag uses loader revision `?v=5`. Register `getPageContext` with `RootCause('boot',
+The tag uses loader revision `?v=5`. Register `getPageContext` with `ReplyPen('boot',
 {getPageContext: () => "# Current selection\nResource: people"})` before loading it to provide
 per-message Markdown. The hosted loader captures URL/context at submission and preserves queued
 snapshots; these hints never authorize access. See the [hub chat contract](https://github.com/replypen/replypen-embassy/blob/main/planes/chat.md#page-context-page_url-page_context).
