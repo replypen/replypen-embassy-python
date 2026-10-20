@@ -26,6 +26,7 @@ The wire contract lives in the hub `github.com/replypen/replypen-embassy`: `CONT
 | `result.py` / `resultroute.py` | tolerant result decode, ack/dedupe/release behavior |
 | `client.py` | analysis trigger and sent-message/answers clients |
 | `chat.py` | HS256 embed token and widget tag; separate chat key |
+| `credentials.py` | the one `credentials` rule check, shared by chat mint and analysis trigger |
 | `api.py` | generic API caller and `rcor_` token exchange/cache |
 | `http.py` | injected transport types and urllib default |
 | `src/rootcause_embassy/` | legacy import alias: same module objects via `sys.modules` |

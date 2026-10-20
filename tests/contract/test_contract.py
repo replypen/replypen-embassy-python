@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+from dataclasses import replace
 from pathlib import Path
 from typing import Any
 from urllib.parse import parse_qs, urlsplit
@@ -784,6 +785,31 @@ def test_result_redelivery_semantics() -> None:
                 tenant="acme",
             ),
         ),
+        (
+            "analysis/trigger_with_credentials.json",
+            "contract-nonce-trigger-credentials",
+            AnalysisRequest(
+                subject="Camp dashboard shows no registrations",
+                body=(
+                    "Since this morning my dashboard lists zero registrations for the summer camp."
+                ),
+                metadata={"resource_type": "SupportTicket", "resource_id": "42"},
+                session_id=SESSION_ID,
+                tenant="acme",
+                principal=Principal(
+                    kind="acme_user",
+                    external_id="user-8f3",
+                    asserted_by="acme",
+                    assurance="customer_backend_jwt",
+                    tenant_hint="acme",
+                ),
+                # Reversed on purpose: the client sorts keys, as the golden does.
+                credentials={
+                    "ACME_API_BASE": "https://api.acme.example",
+                    "ACME_AGENT_TOKEN": "acme-agent-token-8f3",
+                },
+            ),
+        ),
     ],
 )
 def test_outbound_trigger_serialization(name, nonce, analysis_request) -> None:
@@ -794,6 +820,45 @@ def test_outbound_trigger_serialization(name, nonce, analysis_request) -> None:
     assert analysis.analysis_id
     assert analysis.session_id == SESSION_ID
     assert_outbound(host, name)
+    # Python's json preserves dict and golden order, so the bytes match exactly.
+    assert host.last_request is not None
+    assert host.last_request.body == fixture(name)
+
+
+_PRINCIPAL = Principal(kind="acme_user", external_id="user-8f3")
+
+
+@pytest.mark.parametrize(
+    ("principal", "credentials"),
+    [
+        (_PRINCIPAL, {"RC_TOKEN": "x"}),
+        (_PRINCIPAL, {"lower": "x"}),
+        (_PRINCIPAL, {"A" + "B" * 64: "x"}),
+        (_PRINCIPAL, {"ACME": 1}),
+        (_PRINCIPAL, {"ACME": "a\0b"}),
+        (_PRINCIPAL, {f"K{i}": "v" for i in range(9)}),
+        (_PRINCIPAL, {"BIG": "x" * 9000}),
+        (None, {"ACME_TOKEN": "t"}),
+    ],
+)
+def test_outbound_trigger_refuses_invalid_credentials_before_sending(
+    principal: Principal | None, credentials: dict[str, Any]
+) -> None:
+    host = FakeHost()
+    request = AnalysisRequest(body="x", principal=principal, credentials=credentials)
+    with pytest.raises(EmbassyError) as raised:
+        embassy(host).start_analysis(request)
+    assert raised.value.error_class == "CREDENTIALS_INVALID"
+    assert "a\0b" not in str(raised.value)
+    assert host.last_request is None
+
+
+def test_outbound_trigger_omits_empty_credentials() -> None:
+    host = FakeHost()
+    host.response = fixture("analysis/trigger_response.json")
+    embassy(host).start_analysis(AnalysisRequest(body="x", credentials={}))
+    assert host.last_request is not None
+    assert "credentials" not in json.loads(host.last_request.body)
 
 
 @pytest.mark.parametrize(
@@ -881,6 +946,41 @@ def test_chat_mint_replays_replypen_vector() -> None:
     assert json.loads(_b64decode(token.split(".")[1]))["aud"] == "replypen:chat:acme"
     with pytest.raises(Misconfigured):
         mint_embed_token("", claims)
+
+
+def test_chat_mint_replays_credentials_vector() -> None:
+    vector = json_fixture("chat/jwt_vector_credentials_replypen.json")
+    claims = replace(
+        _vector_claims(vector),
+        jti="99999999-9999-9999-9999-999999999999",
+        # Reversed on purpose: the minter sorts keys, as the golden does.
+        credentials={
+            "ACME_API_BASE": "https://api.acme.example",
+            "ACME_AGENT_TOKEN": "acme-agent-token-8f3",
+        },
+    )
+    token = mint_embed_token(vector["secret"], claims)
+    assert token.startswith(vector["signing_input"] + ".")
+    assert token == vector["token"]
+    plain = mint_embed_token(vector["secret"], replace(claims, credentials={}))
+    assert "credentials" not in json.loads(_b64decode(plain.split(".")[1]))
+
+
+@pytest.mark.parametrize(
+    "credentials",
+    [
+        {"RC_TOKEN": "x"},
+        {"api_token": "x"},
+        {"ACME": "a\0b"},
+        {f"K{i}": "v" for i in range(9)},
+        {"BIG": "x" * 9000},
+    ],
+)
+def test_chat_mint_refuses_invalid_credentials(credentials: dict[str, str]) -> None:
+    vector = json_fixture("chat/jwt_vector_credentials_replypen.json")
+    with pytest.raises(EmbassyError) as raised:
+        mint_embed_token(vector["secret"], replace(_vector_claims(vector), credentials=credentials))
+    assert raised.value.error_class == "CHAT_CREDENTIALS_INVALID"
 
 
 @pytest.mark.parametrize(

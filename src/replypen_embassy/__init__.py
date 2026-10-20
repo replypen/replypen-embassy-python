@@ -36,7 +36,7 @@ from .resultroute import ResultRoute
 from .signature import HEADER, sign, verify
 from .tenant import Tenant
 
-VERSION = "0.6.0"
+VERSION = "0.7.0"
 PROTOCOL = 1
 RUNTIME = "python"
 

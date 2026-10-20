@@ -283,6 +283,13 @@ A ticket created by a chat escalation action can hand that chat to its analysis:
 (at most one, validated before sending). Never take the id from params or user text; the id locates,
 the host authorizes, and the action's approved manifest must opt in.
 
+To let the run call your own API as that user, pass `credentials={"ACME_AGENT_TOKEN": token}`: env
+vars under the chat claim's rules (UPPER_SNAKE keys, no `RC_`, at most 8 entries and 8 KiB, string
+values), minted for exactly `principal` (required with it) with a TTL of at most an hour covering the
+run plus retries. They hold for this run only: mint fresh ones on every follow-up trigger. A
+violation raises `EmbassyError` (`error_class == "CREDENTIALS_INVALID"`) before sending; an older host
+answers `400`.
+
 Your `result_handler(result)` must be idempotent: upsert by `result.analysis_id` or metadata. A
 handler failure is not acknowledged, the nonce is released, and ReplyPen redelivers. Render
 `result.actions` as human-confirmed proposals; never execute them automatically.
@@ -322,12 +329,18 @@ claims = Claims(
     tenant=current_tenant.slug,  # server-authorized context, never browser input
     locale="nl",
     color_scheme="light",
+    # Optional: env vars the session's runs see, e.g. your own user-scoped API token.
+    credentials={"ACME_AGENT_TOKEN": mint_agent_token(current_user, hours=2)},
 )
 token = mint_embed_token(chat_secret, claims)
 tag = widget_tag_html(
     Widget("https://app.replypen.com", "acme", token, mode="page", target="#rc-chat")
 )
 ```
+
+`credentials` is sealed when the conversation opens (a re-minted token does not refresh it), so size
+its lifetime for one conversation; bad keys or values raise `EmbassyError`
+(`error_class == "CHAT_CREDENTIALS_INVALID"`) at mint.
 
 Mint a fresh token per render: the host burns its `jti` when a session opens. The token's `aud` is
 `replypen:chat:<project>`. Chat uses the project's

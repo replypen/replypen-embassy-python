@@ -9,9 +9,11 @@ import html
 import json
 import time
 import uuid
+from collections.abc import Mapping
 from dataclasses import dataclass
 from urllib.parse import urlsplit
 
+from . import credentials as _credentials
 from .errors import Misconfigured
 
 DEFAULT_TTL = 7200
@@ -37,6 +39,9 @@ class Claims:
     jti: str = ""
     ttl: float = DEFAULT_TTL
     issued_at: float | None = None
+    # Env name -> user-scoped token for your own API, sealed on the session at open (hub decision
+    # 20): a re-minted token does not refresh it. Omitted when empty; never logged.
+    credentials: Mapping[str, str] | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -62,6 +67,7 @@ def mint_embed_token(secret: str, claims: Claims) -> str:
     if claims.ttl <= 0:
         raise Misconfigured("chat ttl must be positive")
     origin = canonical_origin(claims.origin)
+    credentials = _credentials.claim(claims.credentials, "CHAT_CREDENTIALS_INVALID")
     issued = int(time.time() if claims.issued_at is None else claims.issued_at)
     jti = claims.jti or str(uuid.uuid4())
     asserted_by = claims.asserted_by or claims.project
@@ -89,6 +95,8 @@ def mint_embed_token(secret: str, claims: Claims) -> str:
         payload["locale"] = claims.locale
     if claims.color_scheme:
         payload["color_scheme"] = claims.color_scheme
+    if credentials:
+        payload["credentials"] = credentials
     claims_bytes = json.dumps(
         payload, separators=(",", ":"), ensure_ascii=False, allow_nan=False
     ).encode()

@@ -61,6 +61,7 @@ analysis/
   trigger.json                          minimal: no session, no principal, no tenant
   trigger_with_principal.json           principal + session_id + tenant + attachment
   trigger_with_context_refs.json        session_id + one action_run context reference + tenant
+  trigger_with_credentials.json         principal + user-scoped credentials (keys sorted) + session_id + tenant
   trigger_response.json                 the 202
   result_callback.json                  full surface incl. project_id/executed_actions/questions/delete
   result_ack.json                       the signed 200 ack

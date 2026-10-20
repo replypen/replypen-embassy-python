@@ -5,10 +5,12 @@ from __future__ import annotations
 import base64
 import binascii
 import json
+from collections.abc import Mapping
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from typing import Any
 
+from . import credentials as _credentials
 from .action_principal import CANONICAL_UUID
 from .config import Config
 from .errors import EmbassyError
@@ -49,6 +51,11 @@ class AnalysisRequest:
     tenant: str = ""
     project_id: str = ""
     context_refs: list[ContextRef] | None = None
+    # Env name -> user-scoped token for your own API, minted for exactly `principal` (required
+    # with it), TTL <= 1h covering the run plus retries. Held for THIS run only (hub decision 29):
+    # pass fresh ones on every follow-up. Chat-claim rules; never logged. Needs a host that knows
+    # the field (an older host answers 400).
+    credentials: Mapping[str, str] | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -107,6 +114,9 @@ class AnalysisClient:
                 "invalid_request",
                 "principal requires both kind and external_id",
             )
+        credentials = _credentials.claim(request.credentials, "CREDENTIALS_INVALID")
+        if credentials and request.principal is None:
+            raise EmbassyError(0, "CREDENTIALS_INVALID", "credentials require a principal")
 
         payload: dict[str, Any] = {
             "subject": request.subject,
@@ -122,6 +132,8 @@ class AnalysisClient:
             ]
         if request.principal is not None:
             payload["principal"] = _principal(request.principal)
+        if credentials:
+            payload["credentials"] = credentials
         payload["nonce"] = self._config.nonce()
         payload["issued_at"] = self._issued_at()
         if request.tenant:
@@ -150,6 +162,7 @@ class AnalysisClient:
                 "analysis_id": analysis.analysis_id,
                 "metadata_keys": sorted(request.metadata),
                 "attachments": len(request.attachments),
+                "credentials": len(credentials or {}),
             },
         )
         return analysis

@@ -181,6 +181,16 @@
       "note": ""
     },
     {
+      "name": "trigger_with_credentials",
+      "file": "analysis/trigger_with_credentials.json",
+      "direction": "embassy->host",
+      "secret": "contract-reverse-secret",
+      "body_bytes": 603,
+      "body_sha256": "95f541e55599f868c82f324bc526e590122d984df77112ab254da9eb8f11ab46",
+      "signature": "sha256=e33890e1eec8431cf12073bd1372aa7fb258005389cd4a6c5e39d1e5df2cf2b1",
+      "note": ""
+    },
+    {
       "name": "result_callback",
       "file": "analysis/result_callback.json",
       "direction": "host->embassy",
